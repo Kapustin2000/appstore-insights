@@ -1,56 +1,105 @@
 # Apple Store Parser API
 
-FastAPI-based API for fetching Apple App Store app information and reviews.
+🚀 **FastAPI-based API for comprehensive Apple App Store data collection and preprocessing**
 
-## Features
+A professional, scalable API for fetching app information, collecting reviews, and performing text preprocessing with advanced analytics capabilities.
 
-- 🍎 Fetch app information from Apple App Store
-- 📝 Retrieve app reviews with ratings and content
-- 🚀 Built with FastAPI for high performance
-- 📚 Auto-generated API documentation
-- 🔧 Configurable request limits and delays
+## ✨ Features
 
-## Installation
+- 🍎 **App Information**: Fetch detailed app metadata from iTunes API
+- 📝 **Review Collection**: Retrieve and paginate app reviews with configurable limits
+- 🧹 **Text Preprocessing**: Clean, normalize, and tokenize review text
+- 📊 **Analytics**: Generate summary statistics and language distribution
+- 🏗️ **Scalable Architecture**: Clean, modular codebase with separation of concerns
+- 📚 **Auto-generated Docs**: Interactive API documentation with Swagger/ReDoc
+- 🔧 **Configurable**: Flexible parameters for data collection and processing
+- 🧪 **Well-tested**: Comprehensive test suite with mocking and validation
+- 📦 **Production-ready**: Professional project structure with proper error handling
 
-1. Clone the repository:
+## 🏗️ Project Structure
+
+```
+apple-store-parser/
+├── app/                          # Main application
+│   ├── __init__.py
+│   ├── main.py                   # FastAPI application entry point
+│   ├── api/                      # API layer
+│   │   ├── __init__.py
+│   │   └── routes.py            # All API endpoints
+│   ├── core/                     # Core configuration
+│   │   ├── __init__.py
+│   │   ├── config.py            # Application settings
+│   │   └── exceptions.py        # Custom exceptions
+│   ├── services/                 # Business logic layer
+│   │   ├── __init__.py
+│   │   ├── app_service.py       # iTunes API integration
+│   │   ├── review_service.py    # Review processing service
+│   │   └── text_service.py      # Text preprocessing service
+│   ├── models/                   # Data models
+│   │   ├── __init__.py
+│   │   ├── requests.py          # Request models
+│   │   ├── responses.py         # Response models
+│   │   └── schemas.py           # Data schemas
+│   └── utils/                    # Utilities
+│       ├── __init__.py
+│       ├── validators.py        # Input validation
+│       └── helpers.py           # Helper functions
+├── tests/                        # Test suite
+│   ├── __init__.py
+│   ├── test_api/                # API tests
+│   ├── test_services/           # Service tests
+│   └── test_utils/              # Utility tests
+├── data/                         # Data storage (gitignored)
+├── docs/                         # Documentation
+├── scripts/                      # Utility scripts
+├── pyproject.toml               # Project configuration
+├── README.md                    # This file
+└── .gitignore                   # Git ignore rules
+```
+
+## 🚀 Quick Start
+
+### Installation
+
+1. **Clone the repository:**
 ```bash
 git clone <repository-url>
 cd apple-store-parser
 ```
 
-2. Install dependencies:
+2. **Install dependencies:**
 ```bash
 pip install -e .
 ```
 
-3. For development:
+3. **For development:**
 ```bash
 pip install -e ".[dev]"
 ```
 
-## Usage
+### Running the API
 
-### Start the server
-
+**Start the server:**
 ```bash
 python -m app.main
 ```
 
-Or using uvicorn directly:
+**Or using uvicorn directly:**
 ```bash
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at `http://localhost:8000`
-
-### API Documentation
-
+**Access the API:**
+- API: `http://localhost:8000`
 - Interactive docs: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
-### Endpoints
+## 📚 API Documentation
 
-#### Collect and Preprocess App Data
+### 🎯 Main Endpoint: Collect and Preprocess
+
+**Comprehensive data collection and preprocessing in one call:**
+
 ```http
 POST /app/collect-and-preprocess
 ```
@@ -69,22 +118,25 @@ POST /app/collect-and-preprocess
 ```
 
 **Parameters:**
-- `app_id`: Apple App Store app ID (supports formats: `1566419183`, `id1566419183`, `ID1566419183`)
-- `country`: Country code (default: us, must be 2-letter code)
-- `review_limit`: Maximum number of reviews to collect (1-2000, default: 300)
-- `keep_emojis`: Whether to keep emojis in cleaned text (default: false)
-- `lowercase`: Whether to convert text to lowercase (default: true)
-- `min_tokens`: Minimum number of tokens for a review to be included (default: 3)
-- `save_raw`: Whether to save raw data to file (default: false)
+- `app_id` (required): Apple App Store app ID
+  - Supports formats: `1566419183`, `id1566419183`, `ID1566419183`
+  - Automatically cleaned and validated
+- `country` (optional): Country code (default: `us`)
+  - Must be 2-letter ISO code (e.g., `us`, `gb`, `de`)
+- `review_limit` (optional): Max reviews to collect (default: `300`, range: 1-2000)
+- `keep_emojis` (optional): Keep emojis in cleaned text (default: `false`)
+- `lowercase` (optional): Convert text to lowercase (default: `true`)
+- `min_tokens` (optional): Min tokens for review inclusion (default: `3`)
+- `save_raw` (optional): Save raw data to file (default: `false`)
 
-**Example:**
+**Example Usage:**
 ```bash
 curl -X POST "http://localhost:8000/app/collect-and-preprocess" \
   -H "Content-Type: application/json" \
   -d '{
     "app_id": "1566419183",
     "country": "us",
-    "review_limit": 300,
+    "review_limit": 100,
     "keep_emojis": false,
     "lowercase": true,
     "min_tokens": 3,
@@ -99,13 +151,14 @@ curl -X POST "http://localhost:8000/app/collect-and-preprocess" \
   "meta": {
     "app_id": "1566419183",
     "country": "us",
-    "collected_reviews": 212,
-    "pages_fetched": 2,
-    "processing_time_ms": 1835
+    "collected_reviews": 95,
+    "pages_fetched": 1,
+    "processing_time_ms": 1247
   },
   "app_info": {
     "appId": 1566419183,
     "name": "Lucidly",
+    "bundleId": "com.omarpaniagua.lucidly",
     "genres": ["Lifestyle", "Health & Fitness"],
     "rating": 3.28,
     "ratingCount": 18,
@@ -116,9 +169,9 @@ curl -X POST "http://localhost:8000/app/collect-and-preprocess" \
     "url": "https://apps.apple.com/us/app/lucidly/id1566419183"
   },
   "summary": {
-    "mean_star": 3.4,
-    "by_star": {"5": 40, "4": 12, "3": 10, "2": 22, "1": 128},
-    "lang_distribution": {"en": 0.92, "other": 0.08}
+    "mean_star": 3.2,
+    "by_star": {"5": 12, "4": 8, "3": 15, "2": 25, "1": 35},
+    "lang_distribution": {"en": 0.89, "other": 0.11}
   },
   "data": {
     "raw_reviews": [/* first 50 raw reviews */],
@@ -132,224 +185,213 @@ curl -X POST "http://localhost:8000/app/collect-and-preprocess" \
 }
 ```
 
-**Error Handling:**
-- `400 Bad Request`: Invalid app ID format or country code
-- `404 Not Found`: App not found in specified country
-- `502 Bad Gateway`: Failed to fetch reviews from iTunes API
-- `503 Service Unavailable`: iTunes API unavailable
+### 📱 Additional Endpoints
 
 #### Get App Information
 ```http
 GET /app/{app_id}/info?country=us
 ```
 
-**Parameters:**
-- `app_id` (path): Apple App Store app ID (supports formats: `1566419183`, `id1566419183`, `ID1566419183`)
-- `country` (query): Country code (default: us, must be 2-letter code)
-
-**Examples:**
-```bash
-# Standard format
-curl "http://localhost:8000/app/1566419183/info?country=us"
-
-# With 'id' prefix (automatically cleaned)
-curl "http://localhost:8000/app/id1566419183/info?country=us"
-```
-
-**Error Handling:**
-- `400 Bad Request`: Invalid app ID format or country code
-- `404 Not Found`: App not found in specified country
-- `503 Service Unavailable`: iTunes API unavailable
-
-#### Get App Reviews
+#### Get App Reviews (Fixed 100 reviews)
 ```http
 GET /app/{app_id}/reviews?country=us
 ```
 
-**Parameters:**
-- `app_id` (path): Apple App Store app ID (supports formats: `1566419183`, `id1566419183`, `ID1566419183`)
-- `country` (query): Country code (default: us, must be 2-letter code)
-
-**Note:** Returns up to 100 reviews with a fixed 1-second delay between requests.
-
-**Examples:**
-```bash
-# Standard format
-curl "http://localhost:8000/app/1566419183/reviews?country=us"
-
-# With 'id' prefix (automatically cleaned)
-curl "http://localhost:8000/app/id1566419183/reviews?country=us"
-```
-
-**Error Handling:**
-- `400 Bad Request`: Invalid app ID format or country code
-- `404 Not Found`: No reviews found for app in specified country
-- `503 Service Unavailable`: iTunes API unavailable
-
 #### Health Check
 ```http
-GET /health
+GET /app/health
 ```
 
-## Development
-
-### Code Formatting
-```bash
-black app/
-isort app/
+#### API Information
+```http
+GET /app/
 ```
 
-### Linting
-```bash
-flake8 app/
-mypy app/
+## 🔧 Configuration
+
+The application uses a centralized configuration system in `app/core/config.py`:
+
+```python
+class Settings(BaseModel):
+    # API settings
+    app_name: str = "Apple Store Parser API"
+    app_version: str = "0.1.0"
+    debug: bool = False
+    
+    # Server settings
+    host: str = "0.0.0.0"
+    port: int = 8000
+    
+    # iTunes API settings
+    itunes_timeout: int = 15
+    itunes_user_agent: str = "storelytics/1.0"
+    
+    # Review collection settings
+    default_review_limit: int = 300
+    max_review_limit: int = 2000
+    default_delay: float = 1.0
+    
+    # Text processing settings
+    default_min_tokens: int = 3
+    default_keep_emojis: bool = False
+    default_lowercase: bool = True
+    
+    # Data storage
+    data_dir: str = "data"
+    
+    model_config = ConfigDict(env_file=".env", case_sensitive=False, extra="ignore")
 ```
 
-### Testing
+## 🧪 Testing
+
+**Run all tests:**
 ```bash
 pytest
 ```
 
-## Project Structure
-
-```
-apple-store-parser/
-├── app/
-│   ├── __init__.py
-│   └── main.py          # FastAPI application
-├── pyproject.toml       # Project configuration
-└── README.md           # This file
+**Run with verbose output:**
+```bash
+pytest -v
 ```
 
-## API Response Examples
+**Run specific test categories:**
+```bash
+# API tests
+pytest tests/test_api/
 
-### App Information Response
-```json
-{
-  "status": "success",
-  "details": {
-    "resultCount": 1,
-    "results": [
-      {
-        "trackId": 1566419183,
-        "trackName": "Lucidly",
-        "bundleId": "com.omarpaniagua.lucidly",
-        "version": "1.15.1",
-        "price": 0.0,
-        "formattedPrice": "Free",
-        "description": "Lucidly collects health readings while you are sleeping via the watch...",
-        "averageUserRating": 3.27778,
-        "userRatingCount": 18,
-        "averageUserRatingForCurrentVersion": 3.27778,
-        "userRatingCountForCurrentVersion": 18,
-        "releaseDate": "2021-05-22T07:00:00Z",
-        "currentVersionReleaseDate": "2025-03-03T17:21:32Z",
-        "releaseNotes": "- updated setup with configuration video\n- minor updates to UI",
-        "artistName": "5Path LLC",
-        "artistId": 1544734236,
-        "sellerName": "5Path LLC",
-        "primaryGenreName": "Lifestyle",
-        "genres": ["Lifestyle", "Health & Fitness"],
-        "contentAdvisoryRating": "9+",
-        "minimumOsVersion": "13.4",
-        "fileSizeBytes": "115293184",
-        "languageCodesISO2A": ["EN"],
-        "screenshotUrls": [
-          "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource126/v4/60/ad/16/60ad1697-13ab-5784-80af-e7f6bdb2a0e9/90d38102-77df-4016-840b-c1561d641f2e_Apple_iPhone_8_Plus_Screenshot_0.png/392x696bb.png"
-        ],
-        "ipadScreenshotUrls": [
-          "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource126/v4/27/0c/20/270c203f-bea8-8826-a4ec-858e79b909a4/a5b29f61-1e38-48da-9891-fea580522081_Apple_iPad_Pro_13_Inch_Screenshot_0.png/576x768bb.png"
-        ],
-        "artworkUrl60": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/e7/ef/63/e7ef635b-f508-878c-ef9b-3ec5659f3b71/AppIcon-0-0-1x_U007emarketing-0-7-0-sRGB-85-220.png/60x60bb.jpg",
-        "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/e7/ef/63/e7ef635b-f508-878c-ef9b-3ec5659f3b71/AppIcon-0-0-1x_U007emarketing-0-7-0-sRGB-85-220.png/100x100bb.jpg",
-        "artworkUrl512": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/e7/ef/63/e7ef635b-f508-878c-ef9b-3ec5659f3b71/AppIcon-0-0-1x_U007emarketing-0-7-0-sRGB-85-220.png/512x512bb.jpg",
-        "trackViewUrl": "https://apps.apple.com/us/app/lucidly/id1566419183?uo=4",
-        "artistViewUrl": "https://apps.apple.com/us/developer/5path-llc/id1544734236?uo=4",
-        "sellerUrl": "https://lucidlyapp.com/"
-      }
-    ]
-  }
-}
+# Service tests
+pytest tests/test_services/
+
+# Utility tests
+pytest tests/test_utils/
 ```
 
-**Response Schema:**
-- `status`: Response status (string)
-- `details`: App information container
-  - `resultCount`: Number of results returned (integer)
-  - `results`: Array of app information objects
-    - `trackId`: Unique app identifier (integer)
-    - `trackName`: App name (string)
-    - `bundleId`: App bundle identifier (string)
-    - `version`: Current app version (string)
-    - `price`: App price (number)
-    - `formattedPrice`: Formatted price string (string)
-    - `description`: App description (string)
-    - `averageUserRating`: Average user rating (number)
-    - `userRatingCount`: Total number of user ratings (integer)
-    - `artistName`: Developer name (string)
-    - `primaryGenreName`: Primary genre (string)
-    - `genres`: List of genres (array of strings)
-    - `contentAdvisoryRating`: Content advisory rating (string)
-    - `minimumOsVersion`: Minimum required iOS version (string)
-    - `screenshotUrls`: iPhone screenshot URLs (array of strings)
-    - `ipadScreenshotUrls`: iPad screenshot URLs (array of strings)
-    - `artworkUrl60/100/512`: App icon URLs (strings)
-    - `trackViewUrl`: App Store URL (string)
-    - `artistViewUrl`: Developer page URL (string)
-    - `sellerUrl`: Seller website URL (string, optional)
+## 🛠️ Development
 
-### App Reviews Response
-```json
-{
-  "status": "success",
-  "count": 10,
-  "items": [
-    {
-      "reviewId": "12663656997",
-      "rating": 1,
-      "title": "Scam",
-      "content": "No rem alarm or sleep date this app is not work or it is way to buggy it had one job but did not do it please don't spend money on this app",
-      "updated": "2025-05-16T13:34:52-07:00",
-      "version": "1.15.1",
-      "author": "vtcyctcfcgctu"
-    },
-    {
-      "reviewId": "12302368049",
-      "rating": 3,
-      "title": "Waiting for update",
-      "content": "I was so elated when I saw that there's finally an app that can wake you up during REM sleep...",
-      "updated": "2025-02-12T06:52:13-07:00",
-      "version": "1.15.0",
-      "author": "DrMEEH"
-    }
-  ]
-}
+### Code Quality
+
+**Formatting:**
+```bash
+black app/ tests/
+isort app/ tests/
 ```
 
-**Response Schema:**
-- `status`: Response status (string)
-- `count`: Number of reviews returned (integer, 0+)
-- `items`: Array of review objects
-  - `reviewId`: Unique review identifier (string)
-  - `rating`: Star rating from 1-5 (integer)
-  - `title`: Review title (string, optional)
-  - `content`: Review content/body (string, optional)
-  - `updated`: Last update timestamp (string, optional)
-  - `version`: App version when review was written (string, optional)
-  - `author`: Review author name (string, optional)
+**Linting:**
+```bash
+flake8 app/ tests/
+mypy app/
+```
 
-## License
+**Pre-commit hooks:**
+```bash
+pre-commit install
+pre-commit run --all-files
+```
 
-MIT License - see LICENSE file for details.
+### Adding New Features
 
-## Contributing
+1. **New API Endpoint:**
+   - Add route in `app/api/routes.py`
+   - Create request/response models in `app/models/`
+   - Add business logic in `app/services/`
+
+2. **New Service:**
+   - Create service class in `app/services/`
+   - Add corresponding tests in `tests/test_services/`
+
+3. **New Utility:**
+   - Add function in `app/utils/`
+   - Add tests in `tests/test_utils/`
+
+## 📊 Data Processing Pipeline
+
+The API implements a sophisticated data processing pipeline:
+
+1. **Input Validation**: Clean and validate app IDs and parameters
+2. **Data Collection**: Fetch app metadata and paginate through reviews
+3. **Text Preprocessing**: 
+   - HTML entity decoding
+   - Unicode normalization
+   - URL/email/mention removal
+   - Emoji handling (optional)
+   - Case normalization
+   - Whitespace cleanup
+4. **Tokenization**: Extract meaningful tokens using regex patterns
+5. **Filtering**: Remove reviews below minimum token threshold
+6. **Analytics**: Calculate summary statistics and language distribution
+7. **Response Assembly**: Combine raw and processed data with metadata
+
+## 🚨 Error Handling
+
+The API provides comprehensive error handling with appropriate HTTP status codes:
+
+- **400 Bad Request**: Invalid input parameters
+- **404 Not Found**: App or reviews not found
+- **502 Bad Gateway**: iTunes API errors
+- **503 Service Unavailable**: External service issues
+- **500 Internal Server Error**: Unexpected server errors
+
+## 📈 Performance Features
+
+- **Pagination**: Efficient review collection with configurable limits
+- **Rate Limiting**: Built-in delays to respect API limits
+- **Response Limiting**: Automatic truncation of large responses
+- **Caching Ready**: Architecture supports easy caching integration
+- **Async Support**: FastAPI's async capabilities for high concurrency
+
+## 🔒 Security Features
+
+- **Input Validation**: Comprehensive parameter validation
+- **Error Sanitization**: Safe error messages without sensitive data
+- **Rate Limiting**: Built-in request throttling
+- **User-Agent**: Proper identification for API requests
+
+## 📦 Dependencies
+
+**Core Dependencies:**
+- `fastapi>=0.104.0` - Web framework
+- `uvicorn[standard]>=0.24.0` - ASGI server
+- `requests>=2.25.0` - HTTP client
+- `pydantic>=2.0.0` - Data validation
+- `beautifulsoup4>=4.12.0` - HTML parsing
+- `lxml>=4.9.0` - XML/HTML parser
+- `emoji>=2.8.0` - Emoji handling
+- `ftfy>=6.1.0` - Text fixing
+
+**Development Dependencies:**
+- `pytest>=7.0` - Testing framework
+- `pytest-asyncio>=0.21.0` - Async testing
+- `black>=23.0` - Code formatting
+- `flake8>=6.0` - Linting
+- `mypy>=1.0` - Type checking
+- `isort>=5.0` - Import sorting
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Add tests
-5. Submit a pull request
+4. Add tests for new functionality
+5. Ensure all tests pass (`pytest`)
+6. Format your code (`black app/ && isort app/`)
+7. Commit your changes (`git commit -m 'Add amazing feature'`)
+8. Push to the branch (`git push origin feature/amazing-feature`)
+9. Open a Pull Request
 
-## Author
+## 📄 License
 
-Mykhailo Kapustin - kapustinomm@gmail.com
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+**Mykhailo Kapustin** - [kapustinomm@gmail.com](mailto:kapustinomm@gmail.com)
+
+## 🙏 Acknowledgments
+
+- Apple iTunes API for providing app data
+- FastAPI team for the excellent web framework
+- All contributors and users of this project
+
+---
+
+**⭐ If you find this project useful, please give it a star!**
