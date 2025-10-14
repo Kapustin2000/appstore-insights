@@ -17,7 +17,7 @@ class TestFetchAppInfo:
         mock_response.json.return_value = {
             "resultCount": 1,
             "results": [{
-                "trackId": 1566419183,
+                "trackId": 1459969523,
                 "trackName": "Test App",
                 "bundleId": "com.test.app",
                 "version": "1.0.0",
@@ -46,7 +46,7 @@ class TestFetchAppInfo:
                 "artworkUrl60": "https://example.com/icon60.png",
                 "artworkUrl100": "https://example.com/icon100.png",
                 "artworkUrl512": "https://example.com/icon512.png",
-                "trackViewUrl": "https://apps.apple.com/app/test-app/id1566419183",
+                "trackViewUrl": "https://apps.apple.com/app/test-app/id1459969523",
                 "artistViewUrl": "https://apps.apple.com/developer/test-developer/id123456",
                 "sellerUrl": "https://example.com"
             }]
@@ -55,11 +55,11 @@ class TestFetchAppInfo:
         mock_get.return_value = mock_response
         
         # Test
-        result = fetch_app_info("1566419183", "us")
+        result = fetch_app_info("1459969523", "us")
         
         # Assertions
         assert result["status"] == "success"
-        assert result["details"]["appId"] == 1566419183
+        assert result["details"]["appId"] == 1459969523
         assert result["details"]["name"] == "Test App"
     
     @patch('app.services.app_service.requests.get')
@@ -107,7 +107,7 @@ class TestFetchReviewsPaged:
         mock_get.return_value = mock_response
         
         # Test
-        result = fetch_reviews_paged("1566419183", "us", limit=1)
+        result = fetch_reviews_paged("1459969523", "us", limit=1)
         
         # Assertions
         assert result["status"] == "success"

@@ -10,6 +10,8 @@ A professional, scalable API for fetching app information, collecting reviews, a
 - 📝 **Review Collection**: Retrieve and paginate app reviews with configurable limits
 - 🧹 **Text Preprocessing**: Clean, normalize, and tokenize review text
 - 📊 **Analytics**: Generate summary statistics and language distribution
+- 🎭 **Sentiment Analysis**: Advanced sentiment analysis using VADER with hybrid scoring
+- 🔍 **Insights Generation**: Extract negative phrases and generate actionable insights
 - 🏗️ **Scalable Architecture**: Clean, modular codebase with separation of concerns
 - 📚 **Auto-generated Docs**: Interactive API documentation with Swagger/ReDoc
 - 🔧 **Configurable**: Flexible parameters for data collection and processing
@@ -34,12 +36,15 @@ apple-store-parser/
 │   │   ├── __init__.py
 │   │   ├── app_service.py       # iTunes API integration
 │   │   ├── review_service.py    # Review processing service
-│   │   └── text_service.py      # Text preprocessing service
+│   │   ├── text_service.py      # Text preprocessing service
+│   │   ├── sentiment_service.py # Sentiment analysis service
+│   │   └── insights_service.py  # Insights generation service
 │   ├── models/                   # Data models
 │   │   ├── __init__.py
 │   │   ├── requests.py          # Request models
 │   │   ├── responses.py         # Response models
-│   │   └── schemas.py           # Data schemas
+│   │   ├── schemas.py           # Data schemas
+│   │   └── analyze.py           # Analysis models
 │   └── utils/                    # Utilities
 │       ├── __init__.py
 │       ├── validators.py        # Input validation
@@ -96,7 +101,9 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## 📚 API Documentation
 
-### 🎯 Main Endpoint: Collect and Preprocess
+### 🎯 Main Endpoints
+
+#### 1. Collect and Preprocess
 
 **Comprehensive data collection and preprocessing in one call:**
 
@@ -104,10 +111,18 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 POST /app/collect-and-preprocess
 ```
 
-**Request Body:**
+#### 2. Analyze Reviews 🆕
+
+**Advanced sentiment analysis and insights generation:**
+
+```http
+POST /app/analyze
+```
+
+**Collect and Preprocess Request Body:**
 ```json
 {
-  "app_id": "1566419183",
+  "app_id": "1459969523",
   "country": "us",
   "review_limit": 300,
   "keep_emojis": false,
@@ -117,9 +132,146 @@ POST /app/collect-and-preprocess
 }
 ```
 
+**Example Response (Nebula: Horoscope & Astrology):**
+```json
+{
+  "status": "ok",
+  "meta": {
+    "app_id": "1459969523",
+    "country": "us",
+    "collected_reviews": 50,
+    "pages_fetched": 1,
+    "processing_time_ms": 1398
+  },
+  "app_info": {
+    "appId": 1459969523,
+    "name": "Nebula: Horoscope & Astrology",
+    "bundleId": "com.genesismedia.Nebula.Horoscope",
+    "genres": ["Lifestyle", "Reference"],
+    "rating": 4.59807,
+    "ratingCount": 162790,
+    "price": 0.0,
+    "seller": "OBRIO LIMITED"
+  },
+  "summary": {
+    "mean_star": 4.18,
+    "by_star": {"5": 35, "4": 5, "3": 2, "1": 8},
+    "lang_distribution": {"en": 1.0, "other": 0.0}
+  },
+  "data": {
+    "raw_reviews": [
+      {
+        "reviewId": "1",
+        "rating": 5,
+        "title": "Informative journey",
+        "content": "Each chat feels like part of a personal journey. The guidance is helpful and gives me peace every time."
+      }
+    ],
+    "clean_reviews": [
+      {
+        "reviewId": "1",
+        "clean_text": "informative journey each chat feels like part of personal journey guidance helpful gives peace every time",
+        "tokens": ["informative", "journey", "each", "chat", "feels", "like", "part", "personal", "journey", "guidance", "helpful", "gives", "peace", "every", "time"],
+        "token_count": 15
+      }
+    ]
+  }
+}
+```
+
+**Analyze Endpoint Request Body:**
+```json
+{
+  "app_id": "1459969523",
+  "country": "us",
+  "review_limit": 300,
+  "use_cached_collect": true,
+  "sentiment_model": "vader",
+  "ngram_range": [1, 2],
+  "min_df": 2,
+  "top_k_phrases": 20,
+  "weights": {"text": 0.6, "stars": 0.4},
+  "recency_cutoffs_days": [90, 365],
+  "reviews_override": null
+}
+```
+
+**Analyze Endpoint Response:**
+```json
+{
+  "status": "ok",
+  "meta": {
+    "app_id": "1459969523",
+    "country": "us",
+    "analyzed": 100,
+    "processing_time_ms": 2468
+  },
+  "sentiment_overview": {
+    "pos": 0.79,
+    "neu": 0.07,
+    "neg": 0.14,
+    "mean_star": 4.09
+  },
+  "top_negative_phrases": [
+    {
+      "phrase": "app",
+      "score": 3.768,
+      "count": 11,
+      "share_neg": 0.557
+    },
+    {
+      "phrase": "scam",
+      "score": 4.083,
+      "count": 15,
+      "share_neg": 0.246
+    },
+    {
+      "phrase": "subscription",
+      "score": 3.267,
+      "count": 16,
+      "share_neg": 0.262
+    }
+  ],
+  "insights": [
+    {
+      "priority": 1,
+      "area": "General",
+      "issue": "app",
+      "why": "56% negative sentiment; strong negative sentiment; recent reviews",
+      "action": "Investigate the issue, gather additional information",
+      "impact": "medium"
+    },
+    {
+      "priority": 2,
+      "area": "General",
+      "issue": "scam",
+      "why": "25% negative sentiment; strong negative sentiment; recent reviews",
+      "action": "Investigate the issue, gather additional information",
+      "impact": "low"
+    },
+    {
+      "priority": 3,
+      "area": "Pricing/IAP",
+      "issue": "subscription",
+      "why": "26% negative sentiment; strong negative sentiment; recent reviews",
+      "action": "Open basic features, add free trial, transparent pricing",
+      "impact": "low"
+    }
+  ],
+  "debug": {
+    "model": "vader",
+    "thresholds": {"neg": -0.2, "pos": 0.2},
+    "low_sample": false,
+    "no_negative_signal": false
+  }
+}
+```
+
 **Parameters:**
+
+**Collect and Preprocess:**
 - `app_id` (required): Apple App Store app ID
-  - Supports formats: `1566419183`, `id1566419183`, `ID1566419183`
+  - Supports formats: `1459969523`, `id1459969523`, `ID1459969523`
   - Automatically cleaned and validated
 - `country` (optional): Country code (default: `us`)
   - Must be 2-letter ISO code (e.g., `us`, `gb`, `de`)
@@ -129,12 +281,27 @@ POST /app/collect-and-preprocess
 - `min_tokens` (optional): Min tokens for review inclusion (default: `3`)
 - `save_raw` (optional): Save raw data to file (default: `false`)
 
+**Analyze Endpoint:**
+- `app_id` (required): Apple App Store app ID
+- `country` (optional): Country code (default: `us`)
+- `review_limit` (optional): Max reviews to analyze (default: `300`, max: `2000`)
+- `use_cached_collect` (optional): Use cached collection (default: `true`)
+- `sentiment_model` (optional): Sentiment model (default: `vader`)
+- `ngram_range` (optional): N-gram range for phrases (default: `[1, 2]`)
+- `min_df` (optional): Min document frequency (default: `2`)
+- `top_k_phrases` (optional): Number of top phrases (default: `20`)
+- `weights` (optional): Text vs stars weights (default: `{"text": 0.6, "stars": 0.4}`)
+- `recency_cutoffs_days` (optional): Recency cutoffs (default: `[90, 365]`)
+- `reviews_override` (optional): Custom reviews data (default: `null`)
+
 **Example Usage:**
+
+**Collect and Preprocess:**
 ```bash
 curl -X POST "http://localhost:8000/app/collect-and-preprocess" \
   -H "Content-Type: application/json" \
   -d '{
-    "app_id": "1566419183",
+    "app_id": "1459969523",
     "country": "us",
     "review_limit": 100,
     "keep_emojis": false,
@@ -144,19 +311,59 @@ curl -X POST "http://localhost:8000/app/collect-and-preprocess" \
   }'
 ```
 
+**Analyze Reviews:**
+```bash
+curl -X POST "http://localhost:8000/app/analyze" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "app_id": "1459969523",
+    "country": "us",
+    "review_limit": 200,
+    "sentiment_model": "vader",
+    "top_k_phrases": 10,
+    "weights": {"text": 0.7, "stars": 0.3}
+  }'
+```
+
+**Example: Analyzing Nebula: Horoscope & Astrology**
+```bash
+# Get app information
+curl "http://localhost:8000/app/1459969523/info?country=us"
+
+# Collect and preprocess reviews
+curl -X POST "http://localhost:8000/app/collect-and-preprocess" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "app_id": "1459969523",
+    "country": "us",
+    "review_limit": 300
+  }'
+
+# Analyze sentiment and generate insights
+curl -X POST "http://localhost:8000/app/analyze" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "app_id": "1459969523",
+    "country": "us",
+    "review_limit": 300,
+    "sentiment_model": "vader",
+    "top_k_phrases": 15
+  }'
+```
+
 **Response:**
 ```json
 {
   "status": "ok",
   "meta": {
-    "app_id": "1566419183",
+    "app_id": "1459969523",
     "country": "us",
     "collected_reviews": 95,
     "pages_fetched": 1,
     "processing_time_ms": 1247
   },
   "app_info": {
-    "appId": 1566419183,
+    "appId": 1459969523,
     "name": "Lucidly",
     "bundleId": "com.omarpaniagua.lucidly",
     "genres": ["Lifestyle", "Health & Fitness"],
@@ -166,7 +373,7 @@ curl -X POST "http://localhost:8000/app/collect-and-preprocess" \
     "locales": ["EN"],
     "releaseDate": "2021-05-22T07:00:00Z",
     "lastUpdate": "2025-03-03T17:21:32Z",
-    "url": "https://apps.apple.com/us/app/lucidly/id1566419183"
+    "url": "https://apps.apple.com/us/app/lucidly/id1459969523"
   },
   "summary": {
     "mean_star": 3.2,
@@ -365,6 +572,63 @@ The API provides comprehensive error handling with appropriate HTTP status codes
 - `flake8>=6.0` - Linting
 - `mypy>=1.0` - Type checking
 - `isort>=5.0` - Import sorting
+
+## 🆕 New Features: Sentiment Analysis & Insights
+
+### Sentiment Analysis
+- **VADER Integration**: Advanced sentiment analysis using NLTK's VADER
+- **Hybrid Scoring**: Combines text sentiment with star ratings for better accuracy
+- **Configurable Thresholds**: Customizable positive/negative classification
+- **Multi-language Support**: Works with English and other languages
+
+### Insights Generation
+- **Negative Phrase Extraction**: TF-IDF based phrase identification from negative reviews
+- **Actionable Recommendations**: Prioritized insights with specific actions
+- **Area Classification**: Automatic categorization (Monetization, UX, Quality, etc.)
+- **Recency Weighting**: Time-based importance scoring for insights
+- **Impact Assessment**: High/medium/low impact classification
+
+### Example Analysis Output (Nebula: Horoscope & Astrology)
+```json
+{
+  "sentiment_overview": {
+    "pos": 0.79,
+    "neu": 0.07, 
+    "neg": 0.14,
+    "mean_star": 4.09
+  },
+  "top_negative_phrases": [
+    {
+      "phrase": "app",
+      "score": 3.768,
+      "count": 11,
+      "share_neg": 0.557
+    },
+    {
+      "phrase": "scam",
+      "score": 4.083,
+      "count": 15,
+      "share_neg": 0.246
+    }
+  ],
+  "insights": [
+    {
+      "priority": 1,
+      "area": "General",
+      "issue": "app",
+      "action": "Investigate the issue, gather additional information",
+      "impact": "medium"
+    },
+    {
+      "priority": 2,
+      "area": "Pricing/IAP",
+      "issue": "subscription",
+      "action": "Open basic features, add free trial, transparent pricing",
+      "impact": "low"
+    }
+  ]
+}
+```
 
 ## 🤝 Contributing
 

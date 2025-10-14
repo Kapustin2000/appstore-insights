@@ -14,10 +14,10 @@ def clean_app_id(app_id: str) -> str:
     Removes 'id' prefix if present and validates that the ID contains only digits.
 
     Args:
-        app_id: Raw app ID (e.g., "id1566419183" or "1566419183")
+        app_id: Raw app ID (e.g., "id1459969523" or "1459969523")
 
     Returns:
-        Cleaned app ID (e.g., "1566419183")
+        Cleaned app ID (e.g., "1459969523")
 
     Raises:
         ValidationError: If app ID is invalid
@@ -34,7 +34,7 @@ def clean_app_id(app_id: str) -> str:
     # Validate that it contains only digits
     if not cleaned_id.isdigit():
         raise ValidationError(
-            f"Invalid app ID format: '{app_id}'. App ID must contain only digits (e.g., '1566419183')"
+            f"Invalid app ID format: '{app_id}'. App ID must contain only digits (e.g., '1459969523')"
         )
 
     # Validate length (Apple App Store IDs are typically 8-10 digits)

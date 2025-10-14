@@ -11,18 +11,18 @@ class TestCleanAppId:
     
     def test_clean_app_id_with_prefix(self):
         """Test cleaning app ID with 'id' prefix."""
-        result = clean_app_id("id1566419183")
-        assert result == "1566419183"
+        result = clean_app_id("id1459969523")
+        assert result == "1459969523"
     
     def test_clean_app_id_without_prefix(self):
         """Test cleaning app ID without prefix."""
-        result = clean_app_id("1566419183")
-        assert result == "1566419183"
+        result = clean_app_id("1459969523")
+        assert result == "1459969523"
     
     def test_clean_app_id_case_insensitive(self):
         """Test cleaning app ID with case insensitive prefix."""
-        result = clean_app_id("ID1566419183")
-        assert result == "1566419183"
+        result = clean_app_id("ID1459969523")
+        assert result == "1459969523"
     
     def test_clean_app_id_empty(self):
         """Test cleaning empty app ID."""
