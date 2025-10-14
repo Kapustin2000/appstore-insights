@@ -1,9 +1,14 @@
 import time
 import re
-from typing import Dict, List, Optional
+import os
+from typing import Dict, List, Optional, Any
 import requests
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field, validator
+
+# Import our custom modules
+from .sources import fetch_app_info as fetch_app_info_new, fetch_reviews_paged
+from .textprep import clean_text, tokenize_en, summarize_stars, detect_language
 
 app = FastAPI(
     title="Apple Store Parser API",
@@ -107,6 +112,49 @@ class AppInfoDetails(BaseModel):
 class AppInfoResponse(BaseModel):
     status: str = Field(..., description="Response status")
     details: AppInfoDetails = Field(..., description="App information details from iTunes API")
+
+
+# New models for collect-and-preprocess endpoint
+class CollectRequest(BaseModel):
+    app_id: str = Field(..., description="Apple App Store app ID")
+    country: str = Field(default="us", pattern=r"^[a-z]{2}$", description="Country code (2-letter)")
+    review_limit: int = Field(default=300, ge=1, le=2000, description="Maximum number of reviews to collect")
+    keep_emojis: bool = Field(default=False, description="Whether to keep emojis in cleaned text")
+    lowercase: bool = Field(default=True, description="Whether to convert text to lowercase")
+    min_tokens: int = Field(default=3, ge=0, description="Minimum number of tokens for a review to be included")
+    save_raw: bool = Field(default=False, description="Whether to save raw data to file")
+
+
+class ReviewRaw(BaseModel):
+    reviewId: str = Field(..., description="Unique review identifier")
+    rating: int = Field(..., ge=1, le=5, description="Star rating")
+    title: Optional[str] = Field(None, description="Review title")
+    content: Optional[str] = Field(None, description="Review content")
+    updated: Optional[str] = Field(None, description="Last update timestamp")
+    version: Optional[str] = Field(None, description="App version")
+    author: Optional[str] = Field(None, description="Review author")
+
+
+class ReviewClean(BaseModel):
+    reviewId: str = Field(..., description="Unique review identifier")
+    clean_text: str = Field(..., description="Cleaned and normalized text")
+    tokens: List[str] = Field(..., description="List of tokens")
+    token_count: int = Field(..., description="Number of tokens")
+
+
+class Summary(BaseModel):
+    mean_star: Optional[float] = Field(None, description="Average star rating")
+    by_star: Dict[str, int] = Field(..., description="Distribution of ratings by star count")
+    lang_distribution: Dict[str, float] = Field(..., description="Language distribution")
+
+
+class CollectResponse(BaseModel):
+    status: str = Field(..., description="Response status")
+    meta: Dict[str, Any] = Field(..., description="Metadata about the collection process")
+    app_info: Dict[str, Any] = Field(..., description="App information")
+    summary: Summary = Field(..., description="Summary statistics")
+    data: Dict[str, List] = Field(..., description="Raw and cleaned review data")
+    analysis_stub: Dict[str, Optional[str]] = Field(..., description="Placeholder for future analysis")
 
 
 def fetch_app_info(app_id: str, country: str) -> AppInfoResponse:
@@ -302,6 +350,133 @@ async def get_app_reviews(
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy"}
+
+
+@app.post("/app/collect-and-preprocess", response_model=CollectResponse)
+async def collect_and_preprocess(req: CollectRequest):
+    """
+    Collect and preprocess app data from Apple App Store.
+    
+    This endpoint fetches app metadata, collects reviews with pagination,
+    cleans and normalizes text, and returns both raw and processed data
+    along with summary statistics.
+    """
+    t0 = time.time()
+    
+    try:
+        # Clean and validate app ID
+        cleaned_id = clean_app_id(req.app_id)
+        
+        # Fetch app information
+        info = fetch_app_info_new(cleaned_id, req.country)
+        if info.get("status") != "success" or not info.get("details"):
+            raise HTTPException(
+                status_code=404, 
+                detail=f"App with ID '{cleaned_id}' not found in {req.country.upper()} App Store"
+            )
+        
+        app_info = info["details"]
+        
+        # Fetch reviews with pagination
+        reviews = fetch_reviews_paged(
+            app_id=cleaned_id,
+            country=req.country,
+            limit=req.review_limit,
+            delay=1.0
+        )
+        
+        if reviews.get("status") != "success":
+            raise HTTPException(
+                status_code=502, 
+                detail=f"Failed to fetch reviews: {reviews.get('error', 'Unknown error')}"
+            )
+        
+        items = reviews["items"]
+        
+        # Preprocess reviews
+        clean_items = []
+        for r in items:
+            # Combine title and content
+            raw_text = f"{(r.get('title') or '').strip()} {(r.get('content') or '').strip()}".strip()
+            
+            # Clean text
+            ct = clean_text(
+                raw_text, 
+                keep_emojis=req.keep_emojis, 
+                lowercase=req.lowercase
+            )
+            
+            # Tokenize
+            toks = tokenize_en(ct)
+            
+            # Filter by minimum tokens
+            if len(toks) < req.min_tokens:
+                continue
+                
+            clean_items.append({
+                "reviewId": r.get("reviewId"),
+                "clean_text": ct,
+                "tokens": toks,
+                "token_count": len(toks)
+            })
+        
+        # Calculate summary statistics
+        mean_star, by_star = summarize_stars(items)
+        
+        # Language distribution
+        en_count = sum(1 for ci in clean_items if detect_language(ci["clean_text"]) == "en")
+        total_clean = len(clean_items)
+        lang_dist = {
+            "en": round(en_count / max(1, total_clean), 3),
+            "other": round(1 - (en_count / max(1, total_clean)), 3)
+        }
+        
+        # Optional: Save raw data to file
+        if req.save_raw:
+            os.makedirs("data", exist_ok=True)
+            timestamp = time.strftime("%Y%m%d")
+            filename = f"data/{cleaned_id}_{req.country}_{timestamp}.jsonl"
+            
+            import json
+            with open(filename, 'w', encoding='utf-8') as f:
+                for item in items:
+                    f.write(json.dumps(item, ensure_ascii=False) + '\n')
+        
+        # Prepare response
+        response = {
+            "status": "ok",
+            "meta": {
+                "app_id": cleaned_id,
+                "country": req.country,
+                "collected_reviews": len(items),
+                "pages_fetched": reviews["meta"]["pages_fetched"],
+                "processing_time_ms": int((time.time() - t0) * 1000)
+            },
+            "app_info": app_info,
+            "summary": {
+                "mean_star": mean_star,
+                "by_star": by_star,
+                "lang_distribution": lang_dist
+            },
+            "data": {
+                "raw_reviews": items[:50],  # Limit to first 50 for response size
+                "clean_reviews": clean_items[:50]
+            },
+            "analysis_stub": {
+                "sentiment": None,
+                "topics": None,
+                "insights": None
+            }
+        }
+        
+        return response
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 if __name__ == "__main__":

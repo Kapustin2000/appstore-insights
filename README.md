@@ -50,6 +50,94 @@ The API will be available at `http://localhost:8000`
 
 ### Endpoints
 
+#### Collect and Preprocess App Data
+```http
+POST /app/collect-and-preprocess
+```
+
+**Request Body:**
+```json
+{
+  "app_id": "1566419183",
+  "country": "us",
+  "review_limit": 300,
+  "keep_emojis": false,
+  "lowercase": true,
+  "min_tokens": 3,
+  "save_raw": false
+}
+```
+
+**Parameters:**
+- `app_id`: Apple App Store app ID (supports formats: `1566419183`, `id1566419183`, `ID1566419183`)
+- `country`: Country code (default: us, must be 2-letter code)
+- `review_limit`: Maximum number of reviews to collect (1-2000, default: 300)
+- `keep_emojis`: Whether to keep emojis in cleaned text (default: false)
+- `lowercase`: Whether to convert text to lowercase (default: true)
+- `min_tokens`: Minimum number of tokens for a review to be included (default: 3)
+- `save_raw`: Whether to save raw data to file (default: false)
+
+**Example:**
+```bash
+curl -X POST "http://localhost:8000/app/collect-and-preprocess" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "app_id": "1566419183",
+    "country": "us",
+    "review_limit": 300,
+    "keep_emojis": false,
+    "lowercase": true,
+    "min_tokens": 3,
+    "save_raw": false
+  }'
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "meta": {
+    "app_id": "1566419183",
+    "country": "us",
+    "collected_reviews": 212,
+    "pages_fetched": 2,
+    "processing_time_ms": 1835
+  },
+  "app_info": {
+    "appId": 1566419183,
+    "name": "Lucidly",
+    "genres": ["Lifestyle", "Health & Fitness"],
+    "rating": 3.28,
+    "ratingCount": 18,
+    "price": 0.0,
+    "locales": ["EN"],
+    "releaseDate": "2021-05-22T07:00:00Z",
+    "lastUpdate": "2025-03-03T17:21:32Z",
+    "url": "https://apps.apple.com/us/app/lucidly/id1566419183"
+  },
+  "summary": {
+    "mean_star": 3.4,
+    "by_star": {"5": 40, "4": 12, "3": 10, "2": 22, "1": 128},
+    "lang_distribution": {"en": 0.92, "other": 0.08}
+  },
+  "data": {
+    "raw_reviews": [/* first 50 raw reviews */],
+    "clean_reviews": [/* first 50 cleaned reviews with tokens */]
+  },
+  "analysis_stub": {
+    "sentiment": null,
+    "topics": null,
+    "insights": null
+  }
+}
+```
+
+**Error Handling:**
+- `400 Bad Request`: Invalid app ID format or country code
+- `404 Not Found`: App not found in specified country
+- `502 Bad Gateway`: Failed to fetch reviews from iTunes API
+- `503 Service Unavailable`: iTunes API unavailable
+
 #### Get App Information
 ```http
 GET /app/{app_id}/info?country=us

@@ -241,6 +241,10 @@ $RECYCLE.BIN/
 *.sqlite
 *.sqlite3
 
+# Data files
+data/
+*.jsonl
+
 # Logs
 logs/
 *.log
