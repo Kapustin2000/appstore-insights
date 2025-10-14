@@ -314,3 +314,8 @@ temp/
 *.njsproj
 *.sln
 *.sw?
+
+# Generated visualizations
+visualizations/
+*.png
+*.html
