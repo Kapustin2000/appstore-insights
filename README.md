@@ -56,13 +56,22 @@ GET /app/{app_id}/info?country=us
 ```
 
 **Parameters:**
-- `app_id` (path): Apple App Store app ID
-- `country` (query): Country code (default: us)
+- `app_id` (path): Apple App Store app ID (supports formats: `1566419183`, `id1566419183`, `ID1566419183`)
+- `country` (query): Country code (default: us, must be 2-letter code)
 
-**Example:**
+**Examples:**
 ```bash
-curl "http://localhost:8000/app/544007664/info?country=us"
+# Standard format
+curl "http://localhost:8000/app/1566419183/info?country=us"
+
+# With 'id' prefix (automatically cleaned)
+curl "http://localhost:8000/app/id1566419183/info?country=us"
 ```
+
+**Error Handling:**
+- `400 Bad Request`: Invalid app ID format or country code
+- `404 Not Found`: App not found in specified country
+- `503 Service Unavailable`: iTunes API unavailable
 
 #### Get App Reviews
 ```http
@@ -70,15 +79,24 @@ GET /app/{app_id}/reviews?country=us
 ```
 
 **Parameters:**
-- `app_id` (path): Apple App Store app ID
-- `country` (query): Country code (default: us)
+- `app_id` (path): Apple App Store app ID (supports formats: `1566419183`, `id1566419183`, `ID1566419183`)
+- `country` (query): Country code (default: us, must be 2-letter code)
 
 **Note:** Returns up to 100 reviews with a fixed 1-second delay between requests.
 
-**Example:**
+**Examples:**
 ```bash
-curl "http://localhost:8000/app/544007664/reviews?country=us"
+# Standard format
+curl "http://localhost:8000/app/1566419183/reviews?country=us"
+
+# With 'id' prefix (automatically cleaned)
+curl "http://localhost:8000/app/id1566419183/reviews?country=us"
 ```
+
+**Error Handling:**
+- `400 Bad Request`: Invalid app ID format or country code
+- `404 Not Found`: No reviews found for app in specified country
+- `503 Service Unavailable`: iTunes API unavailable
 
 #### Health Check
 ```http

@@ -1,8 +1,9 @@
 import time
+import re
 from typing import Dict, List, Optional
 import requests
 from fastapi import FastAPI, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 app = FastAPI(
     title="Apple Store Parser API",
@@ -11,6 +12,41 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+
+def clean_app_id(app_id: str) -> str:
+    """
+    Clean and validate app ID.
+    
+    Removes 'id' prefix if present and validates that the ID contains only digits.
+    
+    Args:
+        app_id: Raw app ID (e.g., "id1566419183" or "1566419183")
+        
+    Returns:
+        Cleaned app ID (e.g., "1566419183")
+        
+    Raises:
+        ValueError: If app ID is invalid
+    """
+    if not app_id:
+        raise ValueError("App ID cannot be empty")
+    
+    # Remove 'id' prefix if present (case insensitive)
+    cleaned_id = re.sub(r'^id', '', app_id, flags=re.IGNORECASE)
+    
+    # Remove any whitespace
+    cleaned_id = cleaned_id.strip()
+    
+    # Validate that it contains only digits
+    if not cleaned_id.isdigit():
+        raise ValueError(f"Invalid app ID format: '{app_id}'. App ID must contain only digits (e.g., '1566419183')")
+    
+    # Validate length (Apple App Store IDs are typically 8-10 digits)
+    if len(cleaned_id) < 8 or len(cleaned_id) > 10:
+        raise ValueError(f"Invalid app ID length: '{cleaned_id}'. App ID should be 8-10 digits long")
+    
+    return cleaned_id
 
 
 class ReviewItem(BaseModel):
@@ -84,17 +120,36 @@ def fetch_app_info(app_id: str, country: str) -> AppInfoResponse:
         AppInfoResponse: Typed response with status and app details.
     """
     try:
-        data = requests.get(f"https://itunes.apple.com/{country}/lookup?id={app_id}")
+        # Clean and validate app ID
+        cleaned_id = clean_app_id(app_id)
+        
+        # Validate country code (basic validation)
+        if not country or len(country) != 2:
+            raise ValueError("Country code must be a 2-letter code (e.g., 'us', 'gb', 'de')")
+        
+        data = requests.get(f"https://itunes.apple.com/{country}/lookup?id={cleaned_id}", timeout=10)
         data.raise_for_status()
         
         app_data = data.json()
+        
+        # Check if app was found
+        if app_data.get("resultCount", 0) == 0:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"App with ID '{cleaned_id}' not found in {country.upper()} App Store"
+            )
         
         return AppInfoResponse(
             status="success",
             details=AppInfoDetails(**app_data),
         )
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except requests.RequestException as e:
-        raise HTTPException(status_code=400, detail=f"Failed to fetch app info: {str(e)}")
+        raise HTTPException(status_code=503, detail=f"Failed to fetch app info from iTunes API: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 def fetch_app_reviews(app_id: str, country: str) -> AppReviewsResponse:
@@ -108,19 +163,40 @@ def fetch_app_reviews(app_id: str, country: str) -> AppReviewsResponse:
         AppReviewsResponse: Typed response with status, count and review items. Fixed to 100 reviews with 1.0s delay.
     """
     try:
+        # Clean and validate app ID
+        cleaned_id = clean_app_id(app_id)
+        
+        # Validate country code (basic validation)
+        if not country or len(country) != 2:
+            raise ValueError("Country code must be a 2-letter code (e.g., 'us', 'gb', 'de')")
+        
         headers = {"User-Agent": "market-agent/1.0"}
         seen, items, page = set(), [], 1
+        max_retries = 3
 
         limit = 100  # Fixed limit
         while len(items) < limit:
-            url = f"https://itunes.apple.com/{country}/rss/customerreviews/id={app_id}/sortBy=mostRecent/page={page}/json"
-            r = requests.get(url, headers=headers, timeout=15)
+            url = f"https://itunes.apple.com/{country}/rss/customerreviews/id={cleaned_id}/sortBy=mostRecent/page={page}/json"
             
-            if r.status_code != 200:
+            # Retry logic for failed requests
+            for attempt in range(max_retries):
+                try:
+                    r = requests.get(url, headers=headers, timeout=15)
+                    r.raise_for_status()
+                    break
+                except requests.RequestException as e:
+                    if attempt == max_retries - 1:
+                        raise e
+                    time.sleep(1.0)  # Wait before retry
+            
+            js = r.json()
+            
+            # Check if feed exists and has entries
+            feed = js.get("feed", {})
+            if not feed:
                 break
                 
-            js = r.json()
-            entries = (js.get("feed", {}) or {}).get("entry", []) or []
+            entries = feed.get("entry", []) or []
             added = 0
 
             for e in entries:
@@ -129,20 +205,24 @@ def fetch_app_reviews(app_id: str, country: str) -> AppReviewsResponse:
                 rid = ((e.get("id", {}) or {}).get("label"))
                 if rid and rid not in seen:
                     seen.add(rid)
-                    items.append({
-                        "reviewId": rid,
-                        "rating": int(((e.get("im:rating", {}) or {}).get("label") or "0")),
-                        "title": ((e.get("title", {}) or {}).get("label")),
-                        "content": ((e.get("content", {}) or {}).get("label")),
-                        "updated": ((e.get("updated", {}) or {}).get("label")),
-                        "version": ((e.get("im:version", {}) or {}).get("label")),
-                        "author": (((e.get("author", {}) or {}).get("name", {}) or {}).get("label")),
-                    })
-                    added += 1
-                    if len(items) >= limit:
-                        break
+                    try:
+                        items.append({
+                            "reviewId": rid,
+                            "rating": int(((e.get("im:rating", {}) or {}).get("label") or "0")),
+                            "title": ((e.get("title", {}) or {}).get("label")),
+                            "content": ((e.get("content", {}) or {}).get("label")),
+                            "updated": ((e.get("updated", {}) or {}).get("label")),
+                            "version": ((e.get("im:version", {}) or {}).get("label")),
+                            "author": (((e.get("author", {}) or {}).get("name", {}) or {}).get("label")),
+                        })
+                        added += 1
+                        if len(items) >= limit:
+                            break
+                    except (ValueError, TypeError) as e:
+                        # Skip malformed review entries
+                        continue
 
-            links = (js.get("feed", {}) or {}).get("link", []) or []
+            links = feed.get("link", []) or []
             has_next = any((l.get("attributes", {}) or {}).get("rel") == "next" for l in links)
             if not has_next or added == 0:
                 break
@@ -150,14 +230,25 @@ def fetch_app_reviews(app_id: str, country: str) -> AppReviewsResponse:
             page += 1
             time.sleep(1.0)  # Fixed delay of 1 second
 
+        # Check if we found any reviews
+        if not items:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"No reviews found for app ID '{cleaned_id}' in {country.upper()} App Store"
+            )
+
         return AppReviewsResponse(
             status="success", 
             count=len(items), 
             items=[ReviewItem(**item) for item in items]
         )
         
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except requests.RequestException as e:
-        raise HTTPException(status_code=400, detail=f"Failed to fetch app reviews: {str(e)}")
+        raise HTTPException(status_code=503, detail=f"Failed to fetch app reviews from iTunes API: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @app.get("/")
