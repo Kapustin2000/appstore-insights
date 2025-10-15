@@ -4,6 +4,14 @@
 
 A professional, scalable API for fetching app information, collecting reviews, and performing text preprocessing with advanced analytics capabilities.
 
+## 📖 Related Articles
+
+📝 **Read the detailed analysis and insights:**
+- [From Star Ratings to Insights: Building an App Store Review Analysis Pipeline with Python NLP](https://medium.com/@kapustinomm/from-star-ratings-to-insights-building-an-app-store-review-analysis-pipeline-with-python-nlp-56002731e661) - Medium
+- [Building an App Store Review Analysis Pipeline with Python NLP and Data Visualization](https://kapustinomm.hashnode.dev/building-an-app-store-review-analysis-pipeline-with-python-nlp-and-data-visualization) - Hashnode
+
+These articles provide comprehensive explanations of the methodology, visualizations, results, and insights behind this project.
+
 ## ✨ Features
 
 - 🍎 **App Information**: Fetch detailed app metadata from iTunes API
